@@ -106,7 +106,11 @@ jobs:
 
       - name: Install npm dependencies
         working-directory: apps/web
-        run: npm ci
+        run: |
+          npm config set fetch-retries 5
+          npm config set fetch-retry-maxtimeout 120000
+          npm config set fetch-timeout 600000
+          npm ci --no-audit --no-fund --loglevel=info
 
       - name: Type-check and build web frontend
         working-directory: apps/web
