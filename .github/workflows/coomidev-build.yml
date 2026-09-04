@@ -126,7 +126,7 @@ jobs:
         working-directory: .
         run: |
           ./gradlew --no-daemon --max-workers=2 \
-            :app:clean :app:assembleRelease
+            :app:assembleRelease
 
       - name: Verify APK package identity and ABI
         run: |
