@@ -6,7 +6,6 @@ import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Intent;
-import android.content.pm.ServiceInfo;
 import android.os.Build;
 import android.os.IBinder;
 import android.util.Log;
@@ -44,8 +43,15 @@ public class McpServerService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        startForegroundCompat();
-        startServer();
+        try {
+            startForegroundCompat();
+            startServer();
+        } catch (Throwable t) {
+            // Never crash on service start; log and do not restart.
+            Log.e(TAG, "Failed to start MCP service", t);
+            stopSelf();
+            return START_NOT_STICKY;
+        }
         return START_STICKY;
     }
 
@@ -90,28 +96,17 @@ public class McpServerService extends Service {
         String title = "Local MCP Server";
         String text = "Listening on " + link();
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            // Android 10+: use the dataSync foreground service type, which is broadly
-            // supported (unlike specialUse which is Android 14+ only).
-            startForeground(1001,
-                    new Notification.Builder(this, CHANNEL_ID)
-                            .setContentTitle(title)
-                            .setContentText(text)
-                            .setSmallIcon(android.R.drawable.stat_sys_download)
-                            .setContentIntent(pendingIntent)
-                            .setOngoing(true)
-                            .build(),
-                    ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC);
-        } else {
-            startForeground(1001,
-                    new Notification.Builder(this, CHANNEL_ID)
-                            .setContentTitle(title)
-                            .setContentText(text)
-                            .setSmallIcon(android.R.drawable.stat_sys_download)
-                            .setContentIntent(pendingIntent)
-                            .setOngoing(true)
-                            .build());
-        }
+        // Use the plain two-argument startForeground everywhere. With targetSdk 33
+        // Android does not require a foreground-service type, so this avoids the
+        // SecurityException that dataSync/specialUse type permissions can throw.
+        startForeground(1001,
+                new Notification.Builder(this, CHANNEL_ID)
+                        .setContentTitle(title)
+                        .setContentText(text)
+                        .setSmallIcon(android.R.drawable.stat_sys_download)
+                        .setContentIntent(pendingIntent)
+                        .setOngoing(true)
+                        .build());
     }
 
     private String link() {

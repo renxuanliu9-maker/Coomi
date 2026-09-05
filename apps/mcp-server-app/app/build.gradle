@@ -9,9 +9,13 @@ android {
     defaultConfig {
         applicationId 'com.local.mcpserver'
         minSdk 26
-        targetSdk 34
-        versionCode 1
-        versionName '1.0.0'
+        // targetSdk 33 (not 34): on targetSdk < 34 Android does NOT require a
+        // foreground-service type, so startForeground(id, notif) works without
+        // the dataSync/specialUse type permission that would otherwise throw a
+        // SecurityException and crash the service on Android 14+.
+        targetSdk 33
+        versionCode 2
+        versionName '1.0.1'
     }
 
     buildTypes {
