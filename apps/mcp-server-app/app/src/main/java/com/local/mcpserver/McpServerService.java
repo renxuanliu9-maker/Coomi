@@ -11,8 +11,6 @@ import android.os.Build;
 import android.os.IBinder;
 import android.util.Log;
 
-import android.annotation.Nullable;
-
 import java.io.File;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -141,7 +139,6 @@ public class McpServerService extends Service {
         super.onDestroy();
     }
 
-    @Nullable
     @Override
     public IBinder onBind(Intent intent) {
         return null;
