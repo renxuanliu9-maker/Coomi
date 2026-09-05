@@ -127,7 +127,7 @@ public class McpHttpServer {
                 }
                 read += n;
             }
-            String body = new String(buf, 0, read, StandardCharsets.UTF_8);
+            String body = new String(buf, 0, read);
             JSONObject response = process(body);
             String respBody = response.toString();
             byte[] out = respBody.getBytes(StandardCharsets.UTF_8);
