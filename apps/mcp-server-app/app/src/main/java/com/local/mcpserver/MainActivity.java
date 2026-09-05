@@ -1,13 +1,9 @@
 package com.local.mcpserver;
 
-import android.Manifest;
 import android.app.Activity;
 import android.content.Intent;
-import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.Environment;
-import android.provider.Settings;
 import android.text.method.ScrollingMovementMethod;
 import android.widget.Button;
 import android.widget.CheckBox;
@@ -28,26 +24,74 @@ import java.util.List;
  */
 public class MainActivity extends Activity {
 
-    private static final int REQ_PERM = 10;
-
     private TextView statusView;
     private TextView linkView;
     private TextView logView;
     private LinearLayout toolsLayout;
     private Button toggleButton;
     private Button refreshButton;
-    private Button exportLogButton;
-    private Button openPermButton;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(buildUi());
+        installCrashLogger();
+        try {
+            setContentView(buildUi());
+            toggleButton.setOnClickListener(v -> toggleServer());
+            refreshButton.setOnClickListener(v -> refresh());
+        } catch (Throwable t) {
+            // Never crash on UI build issues; show a readable error instead.
+            android.util.Log.e("MainActivity", "UI build failed", t);
+            LinearLayout fallback = new LinearLayout(this);
+            fallback.setPadding(32, 40, 32, 32);
+            TextView err = new TextView(this);
+            err.setText("初始化失败: " + t.getClass().getSimpleName() + ": " + t.getMessage());
+            err.setTextColor(0xFFFF6B6B);
+            fallback.addView(err);
+            setContentView(fallback);
+        }
+    }
 
-        toggleButton.setOnClickListener(v -> toggleServer());
-        refreshButton.setOnClickListener(v -> refresh());
-        exportLogButton.setOnClickListener(v -> Toast.makeText(this, "日志已更新到 log view", Toast.LENGTH_SHORT).show());
-        openPermButton.setOnClickListener(v -> requestStoragePermission());
+    /** Capture any uncaught crash into the app files dir so it can be inspected. */
+    private void installCrashLogger() {
+        final Thread.UncaughtExceptionHandler prev = Thread.getDefaultUncaughtExceptionHandler();
+        Thread.setDefaultUncaughtExceptionHandler((thread, throwable) -> {
+            try {
+                StringBuilder sb = new StringBuilder();
+                sb.append(new java.util.Date()).append("\n");
+                sb.append(throwable.toString()).append("\n");
+                for (StackTraceElement el : throwable.getStackTrace()) {
+                    sb.append("  at ").append(el).append("\n");
+                }
+                Throwable cause = throwable.getCause();
+                while (cause != null) {
+                    sb.append("Caused by: ").append(cause).append("\n");
+                    for (StackTraceElement el : cause.getStackTrace()) {
+                        sb.append("  at ").append(el).append("\n");
+                    }
+                    cause = cause.getCause();
+                }
+                File internal = new File(getFilesDir(), "crash.log");
+                java.io.FileOutputStream fos = new java.io.FileOutputStream(internal, true);
+                fos.write(sb.toString().getBytes("UTF-8"));
+                fos.close();
+                // Also write to the external app dir so it is visible in a file manager
+                // at /sdcard/Android/data/<pkg>/files/crash.log (no permission needed).
+                File extDir = getExternalFilesDir(null);
+                if (extDir != null) {
+                    File ext = new File(extDir, "crash.log");
+                    java.io.FileOutputStream eos = new java.io.FileOutputStream(ext, true);
+                    eos.write(sb.toString().getBytes("UTF-8"));
+                    eos.close();
+                }
+            } catch (Exception ignored) {
+            }
+            if (prev != null) {
+                prev.uncaughtException(thread, throwable);
+            } else {
+                android.os.Process.killProcess(android.os.Process.myPid());
+            }
+        });
     }
 
     private android.view.View buildUi() {
@@ -86,10 +130,6 @@ public class MainActivity extends Activity {
         refreshButton = new Button(this);
         refreshButton.setText("刷新");
         root.addView(refreshButton);
-
-        openPermButton = new Button(this);
-        openPermButton.setText("请求存储权限");
-        root.addView(openPermButton);
 
         TextView toolHeader = new TextView(this);
         toolHeader.setText("内置工具 (可开关)");
@@ -184,34 +224,5 @@ public class MainActivity extends Activity {
             next = next.substring(next.length() - 8000);
         }
         logView.setText(next);
-    }
-
-    private void requestStoragePermission() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            if (!Environment.isExternalStorageManager()) {
-                try {
-                    Intent intent = new Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION,
-                            android.net.Uri.parse("package:" + getPackageName()));
-                    startActivity(intent);
-                } catch (Exception e) {
-                    startActivity(new Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION));
-                }
-            }
-        } else {
-            if (checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE)
-                    != PackageManager.PERMISSION_GRANTED) {
-                requestPermissions(
-                        new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission.READ_EXTERNAL_STORAGE},
-                        REQ_PERM);
-            }
-        }
-    }
-
-    @Override
-    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode == REQ_PERM) {
-            Toast.makeText(this, "权限请求已处理", Toast.LENGTH_SHORT).show();
-        }
     }
 }

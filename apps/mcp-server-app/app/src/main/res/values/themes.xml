@@ -1,9 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="AppTheme" parent="@android:style/Theme.Material.NoActionBar">
-        <item name="android:colorPrimary">#2962FF</item>
-        <item name="android:colorPrimaryDark">#0D47A1</item>
-        <item name="android:colorAccent">#00B0FF</item>
+    <!--
+      Use the most universally-supported device theme with no ActionBar.
+      Theme.Material and Theme.AppCompat can be missing or behave differently
+      across OEM builds; Theme.DeviceDefault is guaranteed present on every
+      Android 5.0+ device and needs no extra attributes.
+    -->
+    <style name="AppTheme" parent="@android:style/Theme.DeviceDefault.NoActionBar">
         <item name="android:windowBackground">#101216</item>
+        <item name="android:colorAccent">#00B0FF</item>
     </style>
 </resources>

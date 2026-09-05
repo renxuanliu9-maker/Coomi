@@ -91,6 +91,8 @@ public class McpServerService extends Service {
         String text = "Listening on " + link();
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            // Android 10+: use the dataSync foreground service type, which is broadly
+            // supported (unlike specialUse which is Android 14+ only).
             startForeground(1001,
                     new Notification.Builder(this, CHANNEL_ID)
                             .setContentTitle(title)
@@ -99,7 +101,7 @@ public class McpServerService extends Service {
                             .setContentIntent(pendingIntent)
                             .setOngoing(true)
                             .build(),
-                    ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE);
+                    ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC);
         } else {
             startForeground(1001,
                     new Notification.Builder(this, CHANNEL_ID)
