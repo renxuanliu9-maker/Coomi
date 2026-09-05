@@ -1,0 +1,5 @@
+// Root build for the standalone local MCP server Android app.
+// This project is intentionally self-contained and does NOT depend on Coomi.
+plugins {
+    id 'com.android.application' version '8.13.2' apply false
+}

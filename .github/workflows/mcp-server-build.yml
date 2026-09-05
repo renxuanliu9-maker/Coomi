@@ -1,0 +1,71 @@
+name: MCP Server APK Build
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'apps/mcp-server-app/**'
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  build:
+    name: Build Local MCP Server APK
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install build tools
+        run: |
+          sdkmanager --install "platforms;android-34" "build-tools;34.0.0"
+          echo "ANDROID_HOME=${ANDROID_HOME}" >> "$GITHUB_ENV"
+
+      - name: Grant gradlew exec
+        run: chmod +x apps/mcp-server-app/gradlew
+
+      - name: Build APK (debug keystore)
+        working-directory: apps/mcp-server-app
+        run: |
+          ./gradlew --no-daemon --max-workers=2 :app:assembleRelease
+
+      - name: Locate APK
+        id: apk
+        run: |
+          APK=$(find apps/mcp-server-app/app/build/outputs/apk -type f -name '*.apk' | sort | tail -n 1)
+          if [ -z "$APK" ]; then
+            echo "::error::No APK produced"
+            exit 1
+          fi
+          echo "APK=$APK" >> "$GITHUB_ENV"
+          echo "APK_PATH=$APK"
+
+      - name: Verify APK identity
+        run: |
+          APK="${{ env.APK }}"
+          "$ANDROID_HOME/build-tools/34.0.0/aapt2" dump badging "$APK" | grep -E "package: name='com.local.mcpserver'"
+          "$ANDROID_HOME/build-tools/34.0.0/aapt2" dump badging "$APK" | grep -E "sdkVersion|targetSdkVersion|application-label"
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcp-server-apk
+          path: "${{ env.APK }}"
+          if-no-files-found: error
