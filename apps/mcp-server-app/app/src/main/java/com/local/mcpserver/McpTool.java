@@ -1,6 +1,7 @@
 package com.local.mcpserver;
 
 import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 
 /**
@@ -35,7 +36,7 @@ public interface McpTool {
     void setEnabled(boolean enabled);
 
     /** Build the tool object entry for tools/list. */
-    default JSONObject toListEntry() {
+    default JSONObject toListEntry() throws JSONException {
         JSONObject o = new JSONObject();
         o.put("name", name());
         o.put("description", description());

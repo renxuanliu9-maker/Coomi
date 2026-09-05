@@ -1,6 +1,7 @@
 package com.local.mcpserver;
 
 import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
@@ -149,7 +150,7 @@ public class BuiltinTools {
     }
 
     // ---- echo (health / round-trip) ----
-    public JSONObject echo(JSONObject args) {
+    public JSONObject echo(JSONObject args) throws JSONException {
         String text = args.optString("text", "");
         JSONObject result = new JSONObject();
         result.put("echo", text);
@@ -226,7 +227,7 @@ public class BuiltinTools {
         return textResult(result.toString());
     }
 
-    private JSONObject textResult(String text) {
+    private JSONObject textResult(String text) throws JSONException {
         JSONObject content = new JSONObject();
         content.put("type", "text");
         content.put("text", text);

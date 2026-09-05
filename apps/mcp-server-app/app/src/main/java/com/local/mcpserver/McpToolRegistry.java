@@ -1,6 +1,7 @@
 package com.local.mcpserver;
 
 import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
@@ -17,22 +18,26 @@ public class McpToolRegistry {
     private final Map<String, McpTool> tools = new LinkedHashMap<>();
 
     private static JSONObject schema(String... required) {
-        JSONObject obj = new JSONObject();
-        obj.put("type", "object");
-        JSONObject props = new JSONObject();
-        for (int i = 0; i < required.length; i += 2) {
-            JSONObject p = new JSONObject();
-            p.put("type", required[i + 1]);
-            props.put(required[i], p);
+        try {
+            JSONObject obj = new JSONObject();
+            obj.put("type", "object");
+            JSONObject props = new JSONObject();
+            for (int i = 0; i < required.length; i += 2) {
+                JSONObject p = new JSONObject();
+                p.put("type", required[i + 1]);
+                props.put(required[i], p);
+            }
+            obj.put("properties", props);
+            JSONArray arr = new JSONArray();
+            for (int i = 0; i < required.length; i += 2) {
+                arr.put(required[i]);
+            }
+            obj.put("required", arr);
+            obj.put("additionalProperties", false);
+            return obj;
+        } catch (JSONException e) {
+            throw new RuntimeException(e);
         }
-        obj.put("properties", props);
-        JSONArray arr = new JSONArray();
-        for (int i = 0; i < required.length; i += 2) {
-            arr.put(required[i]);
-        }
-        obj.put("required", arr);
-        obj.put("additionalProperties", false);
-        return obj;
     }
 
     public McpToolRegistry(BuiltinTools bt) {

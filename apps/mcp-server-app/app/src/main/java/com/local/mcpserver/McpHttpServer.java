@@ -1,6 +1,7 @@
 package com.local.mcpserver;
 
 import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
@@ -147,7 +148,7 @@ public class McpHttpServer {
         }
     }
 
-    private JSONObject process(String body) {
+    private JSONObject process(String body) throws Exception {
         JSONObject req;
         try {
             if (body == null || body.trim().isEmpty()) {
@@ -190,7 +191,7 @@ public class McpHttpServer {
         }
     }
 
-    private JSONObject initializeResponse(JSONObject params) {
+    private JSONObject initializeResponse(JSONObject params) throws JSONException {
         String proto = params.optString("protocolVersion", "2024-11-05");
         JSONObject caps = new JSONObject();
         caps.put("tools", new JSONObject());
@@ -206,7 +207,7 @@ public class McpHttpServer {
         return r;
     }
 
-    private JSONObject toolsList() {
+    private JSONObject toolsList() throws JSONException {
         List<McpTool> tools = registry.enabled();
         JSONArray arr = new JSONArray();
         for (McpTool t : tools) {
@@ -231,7 +232,7 @@ public class McpHttpServer {
         return tool.execute(arguments);
     }
 
-    private JSONObject result(int id, JSONObject payload) {
+    private JSONObject result(int id, JSONObject payload) throws JSONException {
         JSONObject r = new JSONObject();
         r.put("jsonrpc", "2.0");
         r.put("id", id);
@@ -239,7 +240,7 @@ public class McpHttpServer {
         return r;
     }
 
-    private JSONObject error(int id, int code, String message) {
+    private JSONObject error(int id, int code, String message) throws JSONException {
         JSONObject e = new JSONObject();
         e.put("code", code);
         e.put("message", message);
