@@ -16,20 +16,17 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.annotation.NonNull;
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.app.ActivityCompat;
-import androidx.core.content.ContextCompat;
-
 import java.io.File;
+import java.nio.file.Paths;
 import java.util.List;
 
 /**
  * Main configuration screen: shows the MCP connection link, a start/stop
  * toggle, the list of tools with enable/disable switches, and a connection
- * log viewer. It has no external UI dependency.
+ * log viewer. It uses only android.app.Activity (no AndroidX to keep the
+ * dependency tree free of kotlin-stdlib duplicate-class conflicts).
  */
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends Activity {
 
     private static final int REQ_PERM = 10;
 
@@ -175,7 +172,8 @@ public class MainActivity extends AppCompatActivity {
 
     private List<McpTool> defaultToolList() {
         // Fallback when server not running: show a static registry for the UI.
-        McpToolRegistry reg = new McpToolRegistry(new BuiltinTools(getFilesDir().toPath()));
+        McpToolRegistry reg = new McpToolRegistry(new BuiltinTools(
+                Paths.get(getFilesDir().getAbsolutePath())));
         return reg.all();
     }
 
@@ -200,9 +198,9 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         } else {
-            if (ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE)
+            if (checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE)
                     != PackageManager.PERMISSION_GRANTED) {
-                ActivityCompat.requestPermissions(this,
+                requestPermissions(
                         new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission.READ_EXTERNAL_STORAGE},
                         REQ_PERM);
             }
@@ -210,7 +208,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == REQ_PERM) {
             Toast.makeText(this, "权限请求已处理", Toast.LENGTH_SHORT).show();
