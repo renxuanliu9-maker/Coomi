@@ -12,6 +12,7 @@ import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
+import java.util.UUID;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -39,6 +40,8 @@ public class McpHttpServer {
     private ServerSocket serverSocket;
     private int port;
     private String jsonRpcId = "1"; // monotonically increasing request id
+    // A session id returned on initialize (Streamable HTTP requirement).
+    private volatile String sessionId = null;
 
     public McpHttpServer(McpToolRegistry registry) {
         this.registry = registry;
@@ -113,9 +116,13 @@ public class McpHttpServer {
             // Consume headers until blank line.
             String line;
             int contentLength = 0;
+            String requestSession = null;
             while ((line = reader.readLine()) != null && !line.isEmpty()) {
-                if (line.toLowerCase().startsWith("content-length:")) {
+                String lower = line.toLowerCase();
+                if (lower.startsWith("content-length:")) {
                     contentLength = Integer.parseInt(line.substring(line.indexOf(':') + 1).trim());
+                } else if (lower.startsWith("mcp-session-id:")) {
+                    requestSession = line.substring(line.indexOf(':') + 1).trim();
                 }
             }
             // Read the JSON-RPC body. JSON may be more than one line; read exactly contentLength bytes.
@@ -133,19 +140,44 @@ public class McpHttpServer {
             String respBody = response.toString();
             byte[] out = respBody.getBytes(StandardCharsets.UTF_8);
             OutputStream os = s.getOutputStream();
-            String header = "HTTP/1.1 200 OK\r\n"
-                    + "Content-Type: application/json\r\n"
-                    + "Content-Length: " + out.length + "\r\n"
-                    + "Access-Control-Allow-Origin: *\r\n"
-                    + "Access-Control-Allow-Headers: Content-Type, Authorization\r\n"
-                    + "Connection: close\r\n"
-                    + "\r\n";
-            os.write(header.getBytes(StandardCharsets.US_ASCII));
+            // Determine whether this request is the initialize handshake, and pick a
+            // session id to echo back (Streamable HTTP clients require Mcp-Session-Id).
+            boolean isInitialize = body.contains("\"initialize\"");
+            String session = resolveSession(isInitialize, requestSession);
+            StringBuilder header = new StringBuilder();
+            header.append("HTTP/1.1 200 OK\r\n");
+            header.append("Content-Type: application/json\r\n");
+            header.append("Content-Length: ").append(out.length).append("\r\n");
+            header.append("Access-Control-Allow-Origin: *\r\n");
+            header.append("Access-Control-Allow-Headers: Content-Type, Authorization, Mcp-Session-Id\r\n");
+            header.append("Access-Control-Expose-Headers: Mcp-Session-Id\r\n");
+            if (session != null) {
+                header.append("Mcp-Session-Id: ").append(session).append("\r\n");
+            }
+            header.append("Connection: close\r\n");
+            header.append("\r\n");
+            os.write(header.toString().getBytes(StandardCharsets.US_ASCII));
             os.write(out);
             os.flush();
         } catch (Exception e) {
             // client disconnect / parse error; drop silently
         }
+    }
+
+    /** Compute the MCP session id to send back for this request. */
+    private String resolveSession(boolean isInitialize, String requestSession) {
+        if (requestSession != null && !requestSession.isEmpty()) {
+            // Client sent a session id; honour it so a session stays stable.
+            sessionId = requestSession;
+            return requestSession;
+        }
+        if (sessionId == null) {
+            // Fresh server after restart: generate on initialize or first request.
+            sessionId = UUID.randomUUID().toString().replace("-", "");
+        }
+        // Only the initialize handshake must return a session id; for other calls
+        // we still return the current session so pooled clients stay happy.
+        return sessionId;
     }
 
     private JSONObject process(String body) throws Exception {
