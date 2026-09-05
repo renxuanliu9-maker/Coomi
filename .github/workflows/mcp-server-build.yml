@@ -44,7 +44,7 @@ jobs:
       - name: Build APK (debug keystore)
         working-directory: apps/mcp-server-app
         run: |
-          ./gradlew --no-daemon --max-workers=2 :app:assembleRelease
+          ./gradlew --no-daemon --max-workers=2 :app:assembleDebug
 
       - name: Locate APK
         id: apk
